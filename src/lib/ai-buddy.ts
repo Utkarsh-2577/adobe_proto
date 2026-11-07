@@ -190,7 +190,9 @@ export async function testGeminiKey(
     return { success: false, message: 'Please provide an API key.' };
   }
 
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+  const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  let lastError = '';
+
   for (const model of models) {
     try {
       const response = await fetch(
@@ -212,23 +214,17 @@ export async function testGeminiKey(
         };
       } else {
         const errData = await response.json().catch(() => null);
-        const errMsg = errData?.error?.message || response.statusText;
-        return {
-          success: false,
-          model,
-          message: `Gemini API returned error: ${errMsg}`,
-        };
+        lastError = errData?.error?.message || response.statusText;
       }
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'Network error';
-      return {
-        success: false,
-        message: `Network error connecting to Gemini API: ${errMsg}`,
-      };
+      lastError = err instanceof Error ? err.message : 'Network error';
     }
   }
 
-  return { success: false, message: 'Unable to reach Gemini API models.' };
+  return { 
+    success: false, 
+    message: `Gemini API returned error: ${lastError || 'No models responded.'}` 
+  };
 }
 
 /**
@@ -267,8 +263,8 @@ TASK:
 Provide a clear, encouraging, structured response explaining why the DAG made these exact changes, emphasizing prerequisites and the strict 6-credit semester limit. Never hallucinate any different schedule.
 `.trim();
 
-      // Try gemini-2.0-flash, then fallback to gemini-1.5-flash
-      const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+      // Try gemini-3.8-flash, gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash
+      const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
       for (const model of models) {
         try {
           const response = await fetch(
