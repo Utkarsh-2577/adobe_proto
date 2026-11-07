@@ -139,7 +139,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
               {/* Message Content Bubble */}
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${isAi
+                className={`max-w-[94%] sm:max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed break-words [overflow-wrap:anywhere] overflow-hidden ${isAi
                     ? 'bg-slate-900/90 border border-slate-800 text-slate-200 shadow-md'
                     : 'bg-indigo-600 text-white shadow-md'
                   }`}
@@ -154,31 +154,31 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
                 {/* Formatted Message Body with Markdown Rendering */}
                 {isAi ? (
-                  <div className="text-sm text-slate-200">
+                  <div className="text-sm text-slate-200 break-words [overflow-wrap:anywhere]">
                     <ReactMarkdown
                       components={{
                         h1: ({ children }) => (
-                          <h3 className="text-base font-bold text-white mt-3 mb-1.5 pb-1 border-b border-slate-800">
+                          <h3 className="text-base font-bold text-white mt-3 mb-1.5 pb-1 border-b border-slate-800 break-words">
                             {children}
                           </h3>
                         ),
                         h2: ({ children }) => (
-                          <h4 className="text-sm font-bold text-white mt-3 mb-1.5 flex items-center gap-1.5">
+                          <h4 className="text-sm font-bold text-white mt-3 mb-1.5 flex items-center gap-1.5 break-words">
                             {children}
                           </h4>
                         ),
                         h3: ({ children }) => (
-                          <h4 className="text-sm font-bold text-cyan-300 mt-2.5 mb-1.5 flex items-center gap-1.5">
+                          <h4 className="text-sm font-bold text-cyan-300 mt-2.5 mb-1.5 flex items-center gap-1.5 break-words">
                             {children}
                           </h4>
                         ),
                         h4: ({ children }) => (
-                          <h5 className="text-xs font-bold text-slate-200 mt-2 mb-1 uppercase tracking-wide">
+                          <h5 className="text-xs font-bold text-slate-200 mt-2 mb-1 uppercase tracking-wide break-words">
                             {children}
                           </h5>
                         ),
                         p: ({ children }) => (
-                          <p className="mb-2 last:mb-0 leading-relaxed text-slate-200 text-sm">
+                          <p className="mb-2.5 last:mb-0 leading-relaxed text-slate-200 text-sm break-words">
                             {children}
                           </p>
                         ),
@@ -201,28 +201,38 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                           </ol>
                         ),
                         li: ({ children }) => (
-                          <li className="leading-relaxed pl-0.5">{children}</li>
+                          <li className="leading-relaxed pl-0.5 break-words">{children}</li>
                         ),
                         hr: () => (
                           <hr className="border-slate-800 my-3" />
                         ),
                         blockquote: ({ children }) => (
-                          <blockquote className="border-l-2 border-cyan-500/70 pl-3 py-1 my-2 bg-slate-950/50 rounded-r text-slate-300 italic text-xs">
+                          <blockquote className="border-l-2 border-cyan-500/70 pl-3 py-1 my-2 bg-slate-950/50 rounded-r text-slate-300 italic text-xs break-words">
                             {children}
                           </blockquote>
                         ),
-                        code: ({ children }) => (
-                          <code className="bg-slate-950 border border-slate-800 text-cyan-300 px-1.5 py-0.5 rounded font-mono text-xs">
+                        pre: ({ children }) => (
+                          <div className="my-2 p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono whitespace-pre-wrap break-words overflow-x-auto">
                             {children}
-                          </code>
+                          </div>
                         ),
+                        code: ({ children, ...props }: any) => {
+                          return (
+                            <code
+                              className="bg-slate-950/80 border border-slate-800 text-cyan-300 px-1.5 py-0.5 rounded font-mono text-xs [overflow-wrap:anywhere]"
+                              {...props}
+                            >
+                              {children}
+                            </code>
+                          );
+                        },
                       }}
                     >
                       {message.content}
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <div className="whitespace-pre-wrap font-sans text-sm text-white leading-relaxed">
+                  <div className="whitespace-pre-wrap font-sans text-sm text-white leading-relaxed break-words [overflow-wrap:anywhere]">
                     {message.content}
                   </div>
                 )}
