@@ -52,6 +52,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     'What happens if I pass Database mastery now?',
   ];
 
+  // Client-side markdown cleaner to prevent meta-prompts and indented code boxes
+  const sanitizeDisplayMarkdown = (content: string) => {
+    if (!content) return '';
+    return content
+      // Remove echoed persona or task instructions
+      .replace(/^Ada,?\s*(AI\s*)?Academic Learning Buddy.*$/gim, '')
+      .replace(/^Explain the changes.*$/gim, '')
+      .replace(/^A new schedule generated.*$/gim, '')
+      // Unwrap any label wrappers like • Greeting/Empathy: "..."
+      .replace(/^[•\s*-]*(?:Greeting\/Empathy|The Core Issue|The "Why"|The Domino Effect|The Constraints|The Outcome):\s*"(.*?)"\s*$/gim, '$1')
+      .replace(/^[•\s*-]*(?:Greeting\/Empathy|The Core Issue|The "Why"|The Domino Effect|The Constraints|The Outcome):\s*(.*)$/gim, '$1')
+      // Strip leading 2-6 spaces before list items so they don't become <pre> code boxes
+      .replace(/^[ \t]{2,}([*-]|\d+\.)/gm, '$1')
+      .trim();
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-950 border-r border-slate-800">
       {/* Chat Header */}
@@ -228,7 +244,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         },
                       }}
                     >
-                      {message.content}
+                      {sanitizeDisplayMarkdown(message.content)}
                     </ReactMarkdown>
                   </div>
                 ) : (
