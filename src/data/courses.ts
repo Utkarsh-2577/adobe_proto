@@ -1,0 +1,111 @@
+import { Course } from '@/types/course';
+
+export const COURSE_CATALOG: Course[] = [
+  {
+    id: 'math101',
+    code: 'MATH-101',
+    name: 'Math 101: Discrete Mathematics & Logic',
+    credits: 3,
+    prerequisites: [],
+    category: 'Core',
+    provider: 'University Core Department',
+    description: 'Foundational propositional logic, graph theory basics, set theory, and combinatorics.',
+    colorTheme: 'blue',
+  },
+  {
+    id: 'cs101',
+    code: 'CS-101',
+    name: 'Introduction to Computer Programming',
+    credits: 3,
+    prerequisites: [],
+    category: 'Core',
+    provider: 'Computer Science Department',
+    description: 'Core computational thinking, variables, loops, control structures, and basic functions.',
+    colorTheme: 'indigo',
+  },
+  {
+    id: 'nptel-db',
+    code: 'NPTEL-CS21',
+    name: 'NPTEL Database Basics',
+    credits: 3,
+    prerequisites: ['cs101'],
+    category: 'Open Resource',
+    provider: 'NPTEL / Swayam National Portal',
+    description: 'Relational algebra, ER-modeling, SQL queries, normalization, and ACID transaction concepts.',
+    colorTheme: 'cyan',
+  },
+  {
+    id: 'ds102',
+    code: 'CS-102',
+    name: 'Data Structures & Algorithms',
+    credits: 3,
+    prerequisites: ['math101', 'cs101'],
+    category: 'Core',
+    provider: 'Computer Science Department',
+    description: 'Arrays, linked lists, trees, heaps, graphs, sorting algorithms, and asymptotic complexity.',
+    colorTheme: 'violet',
+  },
+  {
+    id: 'adv-db',
+    code: 'CS-205',
+    name: 'Advanced Database Systems & Query Optimization',
+    credits: 3,
+    prerequisites: ['nptel-db'],
+    category: 'Core',
+    provider: 'Computer Science Department',
+    description: 'B+ Tree indexing, query execution plans, concurrency control, distributed transactions, and NoSQL.',
+    colorTheme: 'purple',
+  },
+  {
+    id: 'web201',
+    code: 'CS-201',
+    name: 'Full-Stack Web Engineering',
+    credits: 3,
+    prerequisites: ['nptel-db', 'ds102'],
+    category: 'Core',
+    provider: 'Software Engineering Group',
+    description: 'REST API architectures, client-server models, asynchronous event loops, and database integration.',
+    colorTheme: 'emerald',
+  },
+  {
+    id: 'os202',
+    code: 'CS-202',
+    name: 'Operating Systems & Concurrency',
+    credits: 3,
+    prerequisites: ['ds102'],
+    category: 'Core',
+    provider: 'Systems & Networks Division',
+    description: 'Process scheduling, virtual memory, threads, synchronization primitives, deadlocks, and IPC.',
+    colorTheme: 'amber',
+  },
+  {
+    id: 'nptel-cloud',
+    code: 'NPTEL-CS34',
+    name: 'NPTEL Cloud & Distributed Systems',
+    credits: 3,
+    prerequisites: ['adv-db'],
+    category: 'Open Resource',
+    provider: 'NPTEL / Swayam National Portal',
+    description: 'CAP theorem, microservices, containerization, replication, and distributed consensus (Raft/Paxos).',
+    colorTheme: 'teal',
+  },
+  {
+    id: 'sys-arch',
+    code: 'CS-301',
+    name: 'Large-Scale Software Architecture & Design',
+    credits: 3,
+    prerequisites: ['web201', 'adv-db'],
+    category: 'Core',
+    provider: 'Systems Architecture Group',
+    description: 'High-availability design, message brokers, caching layers, horizontal scaling, and fault tolerance.',
+    colorTheme: 'rose',
+  },
+];
+
+export const COURSE_MAP = new Map<string, Course>(
+  COURSE_CATALOG.map((course) => [course.id, course])
+);
+
+export function getCourseById(id: string): Course | undefined {
+  return COURSE_MAP.get(id);
+}
