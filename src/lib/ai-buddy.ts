@@ -10,6 +10,13 @@ export interface ExplanationRequest {
   apiKey?: string;
 }
 
+export interface ExplanationResult {
+  text: string;
+  provider: 'gemini' | 'local';
+  modelUsed?: string;
+  error?: string;
+}
+
 export const ACADEMIC_BUDDY_SYSTEM_PROMPT = `
 You are Ada, an AI Academic Learning Buddy for computer science students.
 IMPORTANT ARCHITECTURAL RULE:
@@ -173,11 +180,43 @@ Your curriculum strategically integrates high-quality Open Educational Resources
   return lines.join('\n');
 }
 
-export interface ExplanationResult {
-  text: string;
-  provider: 'gemini' | 'local';
-  modelUsed?: string;
-  error?: string;
+/**
+ * Dynamically queries Google Generative Language API to get working models for this key
+ */
+async function discoverWorkingModels(apiKey: string): Promise<{ models: string[]; error?: string }> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.trim()}`,
+      {
+        headers: {
+          'x-goog-api-key': apiKey.trim(),
+        },
+      }
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      const list = data.models || [];
+      const supported = list
+        .filter((m: { supportedGenerationMethods?: string[] }) =>
+          m.supportedGenerationMethods?.includes('generateContent')
+        )
+        .map((m: { name: string }) => m.name.replace('models/', ''));
+
+      if (supported.length > 0) {
+        return { models: supported };
+      }
+    } else {
+      const errData = await res.json().catch(() => null);
+      const errMsg = errData?.error?.message || res.statusText;
+      return { models: [], error: errMsg };
+    }
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : 'Network failure';
+    return { models: [], error: errMsg };
+  }
+
+  return { models: [] };
 }
 
 /**
@@ -186,20 +225,34 @@ export interface ExplanationResult {
 export async function testGeminiKey(
   apiKey: string
 ): Promise<{ success: boolean; model?: string; message: string }> {
-  if (!apiKey || apiKey.trim().length === 0) {
-    return { success: false, message: 'Please provide an API key.' };
+  const cleanKey = (apiKey || '').trim();
+  if (!cleanKey) {
+    return { success: false, message: 'No API key provided. Check environment variables or enter a key.' };
   }
 
-  const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-  let lastError = '';
+  // 1. Discover models dynamically
+  const discovery = await discoverWorkingModels(cleanKey);
+  if (discovery.error) {
+    return {
+      success: false,
+      message: `Google Gemini API error: ${discovery.error}`,
+    };
+  }
 
-  for (const model of models) {
+  const candidateModels = discovery.models.length > 0
+    ? discovery.models
+    : ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
+
+  for (const model of candidateModels) {
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': cleanKey,
+          },
           body: JSON.stringify({
             contents: [{ parts: [{ text: 'Ping: Respond with "pong"' }] }],
           }),
@@ -212,18 +265,15 @@ export async function testGeminiKey(
           model,
           message: `Successfully connected to Google Gemini (${model})!`,
         };
-      } else {
-        const errData = await response.json().catch(() => null);
-        lastError = errData?.error?.message || response.statusText;
       }
-    } catch (err: unknown) {
-      lastError = err instanceof Error ? err.message : 'Network error';
+    } catch {
+      // try next
     }
   }
 
-  return { 
-    success: false, 
-    message: `Gemini API returned error: ${lastError || 'No models responded.'}` 
+  return {
+    success: false,
+    message: 'Could not connect to any Gemini models with this key.',
   };
 }
 
@@ -236,9 +286,11 @@ export async function getBuddyExplanation(
   req: ExplanationRequest
 ): Promise<ExplanationResult> {
   const { oldPlan, newPlan, diff, reason, userMessage, apiKey } = req;
+  const cleanKey = (apiKey || '').trim();
 
   // If user provided a Gemini API key or environment key is present, attempt live LLM call
-  if (apiKey && apiKey.trim().length > 0) {
+  if (cleanKey.length > 0) {
+    let lastError = '';
     try {
       const promptText = `
 ${ACADEMIC_BUDDY_SYSTEM_PROMPT}
@@ -263,15 +315,26 @@ TASK:
 Provide a clear, encouraging, structured response explaining why the DAG made these exact changes, emphasizing prerequisites and the strict 6-credit semester limit. Never hallucinate any different schedule.
 `.trim();
 
-      // Try gemini-3.8-flash, gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash
-      const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-      for (const model of models) {
+      // 1. Discover models or use robust defaults
+      const discovery = await discoverWorkingModels(cleanKey);
+      if (discovery.error) {
+        lastError = discovery.error;
+      }
+
+      const candidateModels = discovery.models.length > 0
+        ? discovery.models
+        : ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
+
+      for (const model of candidateModels) {
         try {
           const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`,
             {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': cleanKey,
+              },
               body: JSON.stringify({
                 contents: [{ parts: [{ text: promptText }] }],
               }),
@@ -290,22 +353,35 @@ Provide a clear, encouraging, structured response explaining why the DAG made th
             }
           } else {
             const errData = await response.json().catch(() => null);
-            console.warn(`Gemini API error with model ${model}:`, errData?.error?.message || response.statusText);
+            lastError = errData?.error?.message || response.statusText;
+            console.warn(`Gemini API error with model ${model}:`, lastError);
           }
         } catch (innerErr) {
-          console.warn(`Failed call to ${model}:`, innerErr);
+          lastError = innerErr instanceof Error ? innerErr.message : 'Network error';
         }
       }
     } catch (err) {
-      console.warn('API call failed or was blocked; falling back to deterministic local explainer:', err);
+      lastError = err instanceof Error ? err.message : 'Unknown error';
     }
+
+    // If an error occurred with the live key, build fallback with helpful alert
+    const localText = generateLocalExplanation(diff, reason, userMessage);
+    const alertNote = lastError
+      ? `\n\n> ⚠️ **Gemini API Note:** Google returned: *"${lastError}"*. Displaying schedule via deterministic engine.`
+      : '';
+
+    return {
+      text: localText + alertNote,
+      provider: 'local',
+      modelUsed: "Kahn's Deterministic Rule Explainer",
+      error: lastError,
+    };
   }
 
-  // Fallback to our deterministic, robust local explainer
+  // Fallback to our deterministic local explainer
   return {
     text: generateLocalExplanation(diff, reason, userMessage),
     provider: 'local',
     modelUsed: "Kahn's Deterministic Rule Explainer",
   };
 }
-

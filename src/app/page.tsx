@@ -26,6 +26,7 @@ export default function Home() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
   const [isEnvKeyActive, setIsEnvKeyActive] = useState(false);
+  const [maskedEnvKey, setMaskedEnvKey] = useState<string | null>(null);
 
   // Modals state
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
@@ -169,12 +170,13 @@ export default function Home() {
     setCurrentPlan(initialSort.semesters);
     setDagResult(initialSort);
 
-    // Check if backend has GEMINI_API_KEY from .env.local
+    // Check if backend has GEMINI_API_KEY from environment variables
     fetch('/api/chat')
       .then((res) => res.json())
       .then((data) => {
         if (data.hasEnvKey) {
           setIsEnvKeyActive(true);
+          setMaskedEnvKey(data.maskedKey || null);
         }
       })
       .catch(() => {});
@@ -388,6 +390,7 @@ Your current plan is ready on the right! Try clicking **"Fail Database Mastery C
         apiKey={apiKey}
         onSaveApiKey={setApiKey}
         isEnvKeyActive={isEnvKeyActive}
+        maskedEnvKey={maskedEnvKey}
       />
     </div>
   );

@@ -9,6 +9,7 @@ interface ApiKeyModalProps {
   apiKey: string;
   onSaveApiKey: (key: string) => void;
   isEnvKeyActive?: boolean;
+  maskedEnvKey?: string | null;
 }
 
 export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
@@ -17,6 +18,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   apiKey,
   onSaveApiKey,
   isEnvKeyActive = false,
+  maskedEnvKey = null,
 }) => {
   const [keyInput, setKeyInput] = useState(apiKey);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -107,11 +109,15 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
         <form onSubmit={handleSave} className="p-5 space-y-4 text-xs text-slate-300">
           {/* Active status card */}
           {isEnvKeyActive && (
-            <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-700/60 text-purple-200 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
-              <span>
-                <strong>GEMINI_API_KEY detected in .env.local!</strong> Your backend is configured for live Gemini calls.
-              </span>
+            <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-700/60 text-purple-200 flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-white">Server Environment Variable Active: </strong>
+                <span className="font-mono text-purple-300">{maskedEnvKey || 'GEMINI_API_KEY detected'}</span>
+                <p className="text-[11px] text-purple-300/80 mt-1">
+                  Click &quot;Test Connection&quot; below to verify live Google Gemini API connectivity.
+                </p>
+              </div>
             </div>
           )}
 
