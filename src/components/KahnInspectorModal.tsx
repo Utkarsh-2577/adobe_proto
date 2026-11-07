@@ -171,3 +171,4 @@ export const KahnInspectorModal: React.FC<KahnInspectorModalProps> = ({
     </div>
   );
 };
+

@@ -173,16 +173,76 @@ Your curriculum strategically integrates high-quality Open Educational Resources
   return lines.join('\n');
 }
 
+export interface ExplanationResult {
+  text: string;
+  provider: 'gemini' | 'local';
+  modelUsed?: string;
+  error?: string;
+}
+
+/**
+ * Pings Google Gemini to quickly test key validity
+ */
+export async function testGeminiKey(
+  apiKey: string
+): Promise<{ success: boolean; model?: string; message: string }> {
+  if (!apiKey || apiKey.trim().length === 0) {
+    return { success: false, message: 'Please provide an API key.' };
+  }
+
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Ping: Respond with "pong"' }] }],
+          }),
+        }
+      );
+
+      if (response.ok) {
+        return {
+          success: true,
+          model,
+          message: `Successfully connected to Google Gemini (${model})!`,
+        };
+      } else {
+        const errData = await response.json().catch(() => null);
+        const errMsg = errData?.error?.message || response.statusText;
+        return {
+          success: false,
+          model,
+          message: `Gemini API returned error: ${errMsg}`,
+        };
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Network error';
+      return {
+        success: false,
+        message: `Network error connecting to Gemini API: ${errMsg}`,
+      };
+    }
+  }
+
+  return { success: false, message: 'Unable to reach Gemini API models.' };
+}
+
 /**
  * Main AI Buddy explanation coordinator.
- * Can call external Gemini/OpenAI if an API key is provided, or seamlessly
+ * Can call external Gemini if an API key is provided, or seamlessly
  * falls back to the deterministic local explanation generator.
  */
-export async function getBuddyExplanation(req: ExplanationRequest): Promise<string> {
+export async function getBuddyExplanation(
+  req: ExplanationRequest
+): Promise<ExplanationResult> {
   const { oldPlan, newPlan, diff, reason, userMessage, apiKey } = req;
 
   // If user provided a Gemini API key or environment key is present, attempt live LLM call
-  if (apiKey) {
+  if (apiKey && apiKey.trim().length > 0) {
     try {
       const promptText = `
 ${ACADEMIC_BUDDY_SYSTEM_PROMPT}
@@ -207,22 +267,37 @@ TASK:
 Provide a clear, encouraging, structured response explaining why the DAG made these exact changes, emphasizing prerequisites and the strict 6-credit semester limit. Never hallucinate any different schedule.
 `.trim();
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }],
-          }),
-        }
-      );
+      // Try gemini-2.0-flash, then fallback to gemini-1.5-flash
+      const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+      for (const model of models) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: promptText }] }],
+              }),
+            }
+          );
 
-      if (response.ok) {
-        const data = await response.json();
-        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (candidateText && candidateText.trim().length > 0) {
-          return candidateText.trim();
+          if (response.ok) {
+            const data = await response.json();
+            const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (candidateText && candidateText.trim().length > 0) {
+              return {
+                text: candidateText.trim(),
+                provider: 'gemini',
+                modelUsed: model,
+              };
+            }
+          } else {
+            const errData = await response.json().catch(() => null);
+            console.warn(`Gemini API error with model ${model}:`, errData?.error?.message || response.statusText);
+          }
+        } catch (innerErr) {
+          console.warn(`Failed call to ${model}:`, innerErr);
         }
       }
     } catch (err) {
@@ -231,5 +306,10 @@ Provide a clear, encouraging, structured response explaining why the DAG made th
   }
 
   // Fallback to our deterministic, robust local explainer
-  return generateLocalExplanation(diff, reason, userMessage);
+  return {
+    text: generateLocalExplanation(diff, reason, userMessage),
+    provider: 'local',
+    modelUsed: "Kahn's Deterministic Rule Explainer",
+  };
 }
+

@@ -180,3 +180,4 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     </div>
   );
 };
+

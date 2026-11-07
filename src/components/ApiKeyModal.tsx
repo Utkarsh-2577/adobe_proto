@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Key, Sparkles, Check, ShieldAlert } from 'lucide-react';
+import { X, Key, Sparkles, Check, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
   apiKey: string;
   onSaveApiKey: (key: string) => void;
+  isEnvKeyActive?: boolean;
 }
 
 export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
@@ -15,9 +16,15 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
   onClose,
   apiKey,
   onSaveApiKey,
+  isEnvKeyActive = false,
 }) => {
   const [keyInput, setKeyInput] = useState(apiKey);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -31,9 +38,49 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
     }, 800);
   };
 
+  const handleTestKey = async () => {
+    const keyToTest = keyInput.trim() || apiKey;
+    if (!keyToTest && !isEnvKeyActive) {
+      setTestResult({
+        success: false,
+        message: 'Please paste an API key first to test the connection.',
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'test_key',
+          apiKey: keyToTest,
+        }),
+      });
+
+      const data = await res.json();
+      setTestResult({
+        success: data.success,
+        message: data.message || (data.success ? 'Connected to Gemini!' : 'Connection test failed'),
+      });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Network test error';
+      setTestResult({
+        success: false,
+        message: `Failed to test key: ${errMsg}`,
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   const handleClear = () => {
     setKeyInput('');
     onSaveApiKey('');
+    setTestResult(null);
   };
 
   return (
@@ -45,8 +92,8 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
               <Key className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white">LLM Explainer Settings</h3>
-              <p className="text-xs text-slate-400">Optional: Connect Live Gemini / LLM API</p>
+              <h3 className="font-bold text-sm text-white">Gemini API Status &amp; Key</h3>
+              <p className="text-xs text-slate-400">Manage Live LLM Explainer Connection</p>
             </div>
           </div>
           <button
@@ -58,12 +105,22 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
         </div>
 
         <form onSubmit={handleSave} className="p-5 space-y-4 text-xs text-slate-300">
+          {/* Active status card */}
+          {isEnvKeyActive && (
+            <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-700/60 text-purple-200 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
+              <span>
+                <strong>GEMINI_API_KEY detected in .env.local!</strong> Your backend is configured for live Gemini calls.
+              </span>
+            </div>
+          )}
+
           <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 space-y-1.5">
             <p className="font-medium text-slate-200">
-              ⚡ Works out of the box with zero keys:
+              ⚡ How Gemini API is used:
             </p>
             <p>
-              By default, LearnDAG runs a built-in deterministic AI Explainer that analyzes exact topological diffs and credit limits. You can enter an optional Gemini API key to test live LLM calls.
+              When active, Ada uses Google Gemini (<code className="text-purple-300 font-mono">gemini-2.0-flash</code>) to explain your mathematically sorted schedule without ever modifying the plan.
             </p>
           </div>
 
@@ -74,7 +131,10 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
             <input
               type="password"
               value={keyInput}
-              onChange={(e) => setKeyInput(e.target.value)}
+              onChange={(e) => {
+                setKeyInput(e.target.value);
+                setTestResult(null);
+              }}
               placeholder="AIzaSy..."
               className="w-full bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 outline-none font-mono"
             />
@@ -83,26 +143,56 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
+          {/* Test connection output */}
+          {testResult && (
+            <div
+              className={`p-3 rounded-xl text-xs flex items-start gap-2 border ${
+                testResult.success
+                  ? 'bg-emerald-950/40 border-emerald-700/60 text-emerald-300'
+                  : 'bg-rose-950/40 border-rose-700/60 text-rose-300'
+              }`}
+            >
+              {testResult.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              )}
+              <div className="leading-snug">{testResult.message}</div>
+            </div>
+          )}
+
+          {/* Action Row */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-800">
             <button
               type="button"
-              onClick={handleClear}
-              className="text-slate-400 hover:text-rose-400 text-xs transition-colors cursor-pointer"
+              onClick={handleTestKey}
+              disabled={isTesting}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
             >
-              Clear &amp; Use Built-in Engine
+              {isTesting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                  <span>Testing...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Test Connection</span>
+                </>
+              )}
             </button>
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium cursor-pointer"
+                onClick={handleClear}
+                className="text-slate-400 hover:text-rose-400 text-xs px-2 py-1 transition-colors cursor-pointer"
               >
-                Cancel
+                Clear
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center gap-1.5 cursor-pointer shadow-md shadow-purple-600/20"
               >
                 {savedSuccess ? (
                   <>

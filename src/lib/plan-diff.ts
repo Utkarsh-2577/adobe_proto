@@ -159,3 +159,4 @@ export function compareAcademicPlans(
     summaryText: summaryParts.join(' ') || 'Plan re-evaluated with zero topological shifts.',
   };
 }
+

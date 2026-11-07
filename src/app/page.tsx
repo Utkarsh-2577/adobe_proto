@@ -25,6 +25,7 @@ export default function Home() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
+  const [isEnvKeyActive, setIsEnvKeyActive] = useState(false);
 
   // Modals state
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
@@ -87,6 +88,9 @@ export default function Home() {
       setIsLoadingAi(true);
       try {
         let explanation = '';
+        let provider: 'gemini' | 'local' = 'local';
+        let modelUsed: string | undefined = undefined;
+
         try {
           const apiRes = await fetch('/api/chat', {
             method: 'POST',
@@ -104,6 +108,8 @@ export default function Home() {
             const data = await apiRes.json();
             if (data.success && data.explanation) {
               explanation = data.explanation;
+              provider = data.provider || (data.usedLiveLlm ? 'gemini' : 'local');
+              modelUsed = data.modelUsed;
             }
           }
         } catch {
@@ -111,7 +117,7 @@ export default function Home() {
         }
 
         if (!explanation) {
-          explanation = await getBuddyExplanation({
+          const localRes = await getBuddyExplanation({
             oldPlan: oldPlanSnapshot,
             newPlan: newPlanSnapshot,
             diff,
@@ -119,6 +125,9 @@ export default function Home() {
             userMessage,
             apiKey: apiKey || undefined,
           });
+          explanation = localRes.text;
+          provider = localRes.provider;
+          modelUsed = localRes.modelUsed;
         }
 
         setChatMessages((prev) => [
@@ -128,6 +137,8 @@ export default function Home() {
             sender: 'ai',
             content: explanation,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            provider,
+            modelUsed,
             contextDiff: diff.hasChanged
               ? {
                   reason: triggerReason,
@@ -157,6 +168,16 @@ export default function Home() {
 
     setCurrentPlan(initialSort.semesters);
     setDagResult(initialSort);
+
+    // Check if backend has GEMINI_API_KEY from .env.local
+    fetch('/api/chat')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.hasEnvKey) {
+          setIsEnvKeyActive(true);
+        }
+      })
+      .catch(() => {});
 
     // Initial greeting message from Ada
     setChatMessages([
@@ -289,7 +310,7 @@ Your current plan is ready on the right! Try clicking **"Fail Database Mastery C
         onReset={handleReset}
         onOpenInspector={() => setIsInspectorOpen(true)}
         onOpenApiKey={() => setIsApiKeyModalOpen(true)}
-        hasCustomKey={Boolean(apiKey)}
+        hasCustomKey={Boolean(apiKey) || isEnvKeyActive}
       />
 
       {/* Mobile Screen Navigation Toggle */}
@@ -328,6 +349,7 @@ Your current plan is ready on the right! Try clicking **"Fail Database Mastery C
             messages={chatMessages}
             onSendMessage={handleUserSendMessage}
             isLoading={isLoadingAi}
+            isGeminiActive={Boolean(apiKey) || isEnvKeyActive}
           />
         </div>
 
@@ -365,6 +387,7 @@ Your current plan is ready on the right! Try clicking **"Fail Database Mastery C
         onClose={() => setIsApiKeyModalOpen(false)}
         apiKey={apiKey}
         onSaveApiKey={setApiKey}
+        isEnvKeyActive={isEnvKeyActive}
       />
     </div>
   );

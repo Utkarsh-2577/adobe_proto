@@ -2,14 +2,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '@/types/course';
-import { 
-  Send, 
-  Bot, 
-  User, 
-  Sparkles, 
-  ShieldCheck, 
-  Clock, 
-  ChevronRight, 
+import {
+  Send,
+  Bot,
+  User,
+  Sparkles,
+  ShieldCheck,
+  Clock,
+  ChevronRight,
   HelpCircle,
   AlertCircle,
   Flame,
@@ -20,12 +20,14 @@ interface ChatInterfaceProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
   isLoading: boolean;
+  isGeminiActive?: boolean;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   messages,
   onSendMessage,
   isLoading,
+  isGeminiActive = false,
 }) => {
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -73,9 +75,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-slate-850 px-2.5 py-1 rounded-lg border border-slate-750">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Deterministic Lock</span>
+        <div className="flex items-center gap-2">
+          {isGeminiActive ? (
+            <div className="flex items-center gap-1.5 text-xs text-purple-300 bg-purple-950/80 px-2.5 py-1 rounded-lg border border-purple-800/80 shadow-sm shadow-purple-900/30">
+              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="font-medium">Gemini Live (Active)</span>
+            </div>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-slate-850 px-2.5 py-1 rounded-lg border border-slate-750">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Built-in Deterministic Engine</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -117,22 +128,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             >
               {/* Avatar */}
               <div
-                className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold ${
-                  isAi
+                className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold ${isAi
                     ? 'bg-gradient-to-br from-cyan-600 to-indigo-600 text-white shadow-sm'
                     : 'bg-slate-800 border border-slate-700 text-slate-200'
-                }`}
+                  }`}
               >
                 {isAi ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
 
               {/* Message Content Bubble */}
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  isAi
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${isAi
                     ? 'bg-slate-900/90 border border-slate-800 text-slate-200 shadow-md'
                     : 'bg-indigo-600 text-white shadow-md'
-                }`}
+                  }`}
               >
                 {/* Context badge if this was triggered by a schedule change */}
                 {message.contextDiff && (
@@ -147,13 +156,26 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   {message.content}
                 </div>
 
-                {/* Message Timestamp */}
-                <div
-                  className={`mt-1.5 text-[10px] ${
-                    isAi ? 'text-slate-400' : 'text-indigo-200'
-                  }`}
-                >
-                  {message.timestamp}
+                {/* Message Timestamp & Model Provenance */}
+                <div className="mt-2 pt-1 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[10px]">
+                  <span className={isAi ? 'text-slate-400' : 'text-indigo-200'}>
+                    {message.timestamp}
+                  </span>
+                  {isAi && (
+                    <span className="flex items-center gap-1 font-mono">
+                      {message.provider === 'gemini' ? (
+                        <span className="text-purple-300 bg-purple-950/70 px-1.5 py-0.5 rounded border border-purple-800/60 flex items-center gap-1 font-sans font-medium">
+                          <Sparkles className="w-2.5 h-2.5 text-purple-400" />
+                          <span>Gemini Live ({message.modelUsed || '2.0-flash'})</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 bg-slate-850 px-1.5 py-0.5 rounded border border-slate-750 flex items-center gap-1 font-sans">
+                          <ShieldCheck className="w-2.5 h-2.5 text-cyan-400" />
+                          <span>Local DAG Engine</span>
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -220,3 +242,4 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     </div>
   );
 };
+

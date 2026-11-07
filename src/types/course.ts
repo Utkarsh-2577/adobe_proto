@@ -47,6 +47,8 @@ export interface ChatMessage {
   sender: 'ai' | 'user' | 'system';
   content: string;
   timestamp: string;
+  provider?: 'gemini' | 'local';
+  modelUsed?: string;
   contextDiff?: {
     reason: string;
     addedToRemediation?: string[];
@@ -54,3 +56,4 @@ export interface ChatMessage {
     pushedSemesters?: Array<{ courseName: string; fromSem: number; toSem: number }>;
   };
 }
+

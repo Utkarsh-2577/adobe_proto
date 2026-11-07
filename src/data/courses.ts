@@ -109,3 +109,4 @@ export const COURSE_MAP = new Map<string, Course>(
 export function getCourseById(id: string): Course | undefined {
   return COURSE_MAP.get(id);
 }
+

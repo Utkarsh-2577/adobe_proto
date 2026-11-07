@@ -80,15 +80,24 @@ export const Header: React.FC<HeaderProps> = ({
           {/* API Key Modal Button */}
           <button
             onClick={onOpenApiKey}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
               hasCustomKey
-                ? 'bg-purple-950/60 border-purple-700/60 text-purple-300'
+                ? 'bg-purple-950/80 border-purple-600/70 text-purple-200 shadow-sm shadow-purple-900/30'
                 : 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-400 hover:text-slate-200'
             }`}
             title="Configure Live LLM API Key (Optional)"
           >
-            <Key className="w-3.5 h-3.5 text-purple-400" />
-            <span>{hasCustomKey ? 'Live LLM Active' : 'LLM Mode'}</span>
+            {hasCustomKey ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                <span className="font-semibold text-purple-200">Gemini Live Active</span>
+              </>
+            ) : (
+              <>
+                <Key className="w-3.5 h-3.5 text-purple-400" />
+                <span>LLM Mode (Local)</span>
+              </>
+            )}
           </button>
 
           {/* Reset Scenario */}
@@ -105,3 +114,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
