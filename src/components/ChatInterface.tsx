@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from '@/types/course';
 import {
   Send,
@@ -151,10 +152,80 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   </div>
                 )}
 
-                {/* Formatted Message Body */}
-                <div className="space-y-2 whitespace-pre-wrap font-sans text-sm">
-                  {message.content}
-                </div>
+                {/* Formatted Message Body with Markdown Rendering */}
+                {isAi ? (
+                  <div className="text-sm text-slate-200">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => (
+                          <h3 className="text-base font-bold text-white mt-3 mb-1.5 pb-1 border-b border-slate-800">
+                            {children}
+                          </h3>
+                        ),
+                        h2: ({ children }) => (
+                          <h4 className="text-sm font-bold text-white mt-3 mb-1.5 flex items-center gap-1.5">
+                            {children}
+                          </h4>
+                        ),
+                        h3: ({ children }) => (
+                          <h4 className="text-sm font-bold text-cyan-300 mt-2.5 mb-1.5 flex items-center gap-1.5">
+                            {children}
+                          </h4>
+                        ),
+                        h4: ({ children }) => (
+                          <h5 className="text-xs font-bold text-slate-200 mt-2 mb-1 uppercase tracking-wide">
+                            {children}
+                          </h5>
+                        ),
+                        p: ({ children }) => (
+                          <p className="mb-2 last:mb-0 leading-relaxed text-slate-200 text-sm">
+                            {children}
+                          </p>
+                        ),
+                        strong: ({ children }) => (
+                          <strong className="font-semibold text-white">
+                            {children}
+                          </strong>
+                        ),
+                        em: ({ children }) => (
+                          <em className="italic text-slate-300">{children}</em>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="list-disc pl-5 space-y-1.5 my-2 text-slate-200 text-sm">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal pl-5 space-y-1.5 my-2 text-slate-200 text-sm">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="leading-relaxed pl-0.5">{children}</li>
+                        ),
+                        hr: () => (
+                          <hr className="border-slate-800 my-3" />
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-2 border-cyan-500/70 pl-3 py-1 my-2 bg-slate-950/50 rounded-r text-slate-300 italic text-xs">
+                            {children}
+                          </blockquote>
+                        ),
+                        code: ({ children }) => (
+                          <code className="bg-slate-950 border border-slate-800 text-cyan-300 px-1.5 py-0.5 rounded font-mono text-xs">
+                            {children}
+                          </code>
+                        ),
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="whitespace-pre-wrap font-sans text-sm text-white leading-relaxed">
+                    {message.content}
+                  </div>
+                )}
 
                 {/* Message Timestamp & Model Provenance */}
                 <div className="mt-2 pt-1 border-t border-slate-800/60 flex items-center justify-between gap-2 text-[10px]">
